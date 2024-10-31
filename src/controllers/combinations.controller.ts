@@ -20,7 +20,7 @@ router.post('/generate', async (req: Request, res: Response) => {
   }
   const itemNames = getItems(items);
   const generatedCombination = await getCombinationIfExists(itemNames, length);
-  if (generatedCombination) {
+  if (generatedCombination?.id) {
     res.status(200).json(generatedCombination);
   } else {
     const combinations = generateCombinations(items, length);
@@ -37,7 +37,7 @@ router.post('/generate', async (req: Request, res: Response) => {
     } catch (error) {
       console.error('Error handling request:', error);
     } finally {
-      await connection.end();
+      await connection.release();
     }
   }
 });

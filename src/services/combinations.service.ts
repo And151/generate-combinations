@@ -31,6 +31,8 @@ export async function insertItemsAndGetIds(items: string[]): Promise<number[]> {
   } catch (error) {
     await connection.rollback();
     throw error;
+  } finally {
+    connection.release();
   }
 }
 
@@ -59,6 +61,8 @@ export async function insertCombinationsAndGetIds(
   } catch (error) {
     await connection.rollback();
     throw error;
+  } finally {
+    connection.release();
   }
 }
 
@@ -77,6 +81,8 @@ export async function insertResponse(
   } catch (error) {
     console.error('Error inserting response:', error);
     throw error;
+  } finally {
+    connection.release();
   }
 }
 
@@ -85,14 +91,14 @@ export async function getCombinationIfExists(
   length: number
 ) {
   const connection = await pool.getConnection();
-  const itemIds = await getItemIds(itemNames);
+  const itemIds = await insertItemsAndGetIds(itemNames);
   try {
     await connection.beginTransaction();
     const [rows] = await connection.query(
       selectResponseByCombinationAndLength,
       [JSON.stringify(itemIds), length]
     );
-    const responseCombinationId = rows[0].id;
+    const responseCombinationId = rows[0]?.response_combination;
     const [combinationRows] = await connection.query(selectCombinationById, [
       responseCombinationId,
     ]);
@@ -100,25 +106,8 @@ export async function getCombinationIfExists(
   } catch (error) {
     await connection.rollback();
     throw error;
+  } finally {
+     connection.release();
   }
 }
 
-async function getItemIds(items: string[]): Promise<number[]> {
-  const connection = await pool.getConnection();
-  const itemIds = [];
-  try {
-    await connection.beginTransaction();
-    for (const item of items) {
-      const [rows] = await connection.query(selectIdFromItems, [item]);
-      if ((rows as any[]).length > 0) {
-        const existingId = (rows as any)[0].id;
-        itemIds.push(existingId);
-      }
-    }
-    await connection.commit();
-    return itemIds;
-  } catch (error) {
-    await connection.rollback();
-    throw error;
-  }
-}
